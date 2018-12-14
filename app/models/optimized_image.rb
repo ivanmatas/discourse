@@ -68,7 +68,7 @@ class OptimizedImage < ActiveRecord::Base
         Rails.logger.error("Could not find file in the store located at url: #{upload.url}")
       else
         # create a temp file with the same extension as the original
-        extension = ".#{upload.extension}"
+        extension = ".#{opts[:format] || upload.extension}"
 
         if extension.length == 1
           return nil
@@ -87,7 +87,7 @@ class OptimizedImage < ActiveRecord::Base
         end
 
         if resized
-          thumbnail = OptimizedImage.create!(
+          thumbnail = OptimizedImage.new(
             upload_id: upload.id,
             sha1: Upload.generate_digest(temp_path),
             extension: extension,
@@ -96,6 +96,12 @@ class OptimizedImage < ActiveRecord::Base
             url: "",
             filesize: File.size(temp_path)
           )
+          if opts[:add_data_uri]
+            data = Base64.encode64(File.read(temp_path)).gsub("\n", "")
+            thumbnail.data_uri = "data:image/#{opts[:format]};base64,#{data}"
+          end
+
+          thumbnail.save!
           # store the optimized image and update its url
           File.open(temp_path) do |file|
             url = Discourse.store.store_optimized_image(file, thumbnail)
@@ -173,7 +179,7 @@ class OptimizedImage < ActiveRecord::Base
   IM_DECODERS ||= /\A(jpe?g|png|tiff?|bmp|ico|gif)\z/i
 
   def self.prepend_decoder!(path, ext_path = nil, opts = nil)
-    extension = File.extname((opts && opts[:filename]) || ext_path || path)[1..-1]
+    extension = File.extname((opts && opts[:filename]) || path || ext_path)[1..-1]
     raise Discourse::InvalidAccess if !extension || !extension.match?(IM_DECODERS)
     "#{extension}:#{path}"
   end

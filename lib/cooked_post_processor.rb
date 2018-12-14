@@ -10,6 +10,7 @@ class CookedPostProcessor
 
   INLINE_ONEBOX_LOADING_CSS_CLASS = "inline-onebox-loading"
   INLINE_ONEBOX_CSS_CLASS = "inline-onebox"
+  LOADING_SIZE = 5
 
   attr_reader :cooking_options, :doc
 
@@ -332,6 +333,8 @@ class CookedPostProcessor
           upload.create_thumbnail!(resized_w, resized_h, crop: crop)
         end
       end
+
+      upload.create_thumbnail!(LOADING_SIZE, LOADING_SIZE, format: 'gif', add_data_uri: true)
     end
 
     add_lightbox!(img, original_width, original_height, upload, cropped: crop)
@@ -397,6 +400,10 @@ class CookedPostProcessor
         end
       else
         img["src"] = upload.url
+      end
+
+      if loading_thumb = upload.thumbnail(LOADING_SIZE, LOADING_SIZE)
+        img["data-loading"] = loading_thumb.data_uri
       end
     end
 
